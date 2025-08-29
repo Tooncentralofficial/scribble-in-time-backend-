@@ -80,3 +80,4 @@ zstandard==0.24.0
 gunicorn
 psycopg2-binary
 whitenoise
+djangorestframework
