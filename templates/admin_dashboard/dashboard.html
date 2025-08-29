@@ -1,0 +1,230 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans 'Dashboard' %} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<style>
+    .dashboard {
+        background-color: #f9fafb;
+        min-height: 100vh;
+    }
+    .dashboard-header {
+        background-color: #ffffff;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid #e5e7eb;
+        padding: 1rem 1.5rem;
+    }
+    .stat-card {
+        background-color: #ffffff;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        padding: 1.5rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .stat-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #4f46e5;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    .quick-action {
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        text-align: center;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .quick-action:hover {
+        background-color: #f9fafb;
+    }
+    .quick-action i {
+        color: #4f46e5;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .quick-action p {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold text-gray-900">{% trans 'Dashboard' %}</h1>
+        <p class="text-gray-600">{% trans 'Welcome back! Here\'s what\'s happening with your site.' %}</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_users }}</div>
+            <div class="stat-label">{% trans 'Total Users' %}</div>
+            <div class="mt-2 text-xs text-green-600">
+                <i class="fas fa-arrow-up"></i> 12% from last month
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ total_staff }}</div>
+            <div class="stat-label">{% trans 'Staff Members' %}</div>
+            <div class="mt-2 text-xs text-green-600">
+                <i class="fas fa-arrow-up"></i> 5% from last month
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ total_superusers }}</div>
+            <div class="stat-label">{% trans 'Administrators' %}</div>
+            <div class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-equals"></i> No change
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">98.5%</div>
+            <div class="stat-label">{% trans 'System Status' %}</div>
+            <div class="mt-2 text-xs text-green-600">
+                <i class="fas fa-check-circle"></i> All systems operational
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">{% trans 'Quick Actions' %}</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="#" class="quick-action">
+                <i class="fas fa-plus-circle"></i>
+                <p>{% trans 'New User' %}</p>
+            </a>
+            <a href="#" class="quick-action">
+                <i class="fas fa-cog"></i>
+                <p>{% trans 'Settings' %}</p>
+            </a>
+            <a href="#" class="quick-action">
+                <i class="fas fa-users"></i>
+                <p>{% trans 'Manage Users' %}</p>
+            </a>
+            <a href="#" class="quick-action">
+                <i class="fas fa-chart-bar"></i>
+                <p>{% trans 'Analytics' %}</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">{% trans 'Recent Activity' %}</h3>
+        </div>
+        <div class="divide-y divide-gray-200">
+            <div class="px-6 py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <i class="fas fa-user-plus text-indigo-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">{% trans 'New user registered' %}</p>
+                        <p class="text-sm text-gray-500">{% trans '5 minutes ago' %}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">{% trans 'System update completed' %}</p>
+                        <p class="text-sm text-gray-500">{% trans '2 hours ago' %}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Document Upload Section -->
+    <div class="mt-8">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans 'Upload Document to Knowledge Base' %}</h2>
+            <form id="document-upload-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="flex items-center space-x-4">
+                    <div class="flex-1">
+                        <input type="file" name="file" id="document-file" class="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-md file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100" required>
+                    </div>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-upload mr-2"></i> {% trans 'Upload' %}
+                    </button>
+                </div>
+                <div id="upload-status" class="mt-2 text-sm"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extrajs %}
+<script>
+document.getElementById('document-upload-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const statusElement = document.getElementById('upload-status');
+    const submitButton = this.querySelector('button[type="submit"]');
+    
+    try {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading...';
+        statusElement.textContent = 'Uploading document...';
+        statusElement.className = 'mt-2 text-sm text-blue-600';
+        
+        const response = await fetch('/api/upload/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            statusElement.textContent = 'Document uploaded successfully!';
+            statusElement.className = 'mt-2 text-sm text-green-600';
+            this.reset();
+        } else {
+            throw new Error(result.detail || 'Upload failed');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        statusElement.textContent = 'Error: ' + (error.message || 'Failed to upload document');
+        statusElement.className = 'mt-2 text-sm text-red-600';
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-upload mr-2"></i> Upload';
+    }
+});
+</script>
+{% endblock %}
+
+{% endblock %}
