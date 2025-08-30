@@ -66,10 +66,36 @@ class AdminSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(KnowledgeDocument)
 class KnowledgeDocumentAdmin(admin.ModelAdmin):
-    list_display = ('file', 'uploaded_at', 'is_processed', 'processing_error')
-    readonly_fields = ('uploaded_at', 'is_processed', 'processing_error')
+    list_display = ('file', 'uploaded_at', 'is_processed')
+    readonly_fields = ('uploaded_at', 'is_processed')
     date_hierarchy = 'uploaded_at'
     actions = ['reprocess_documents']
+    
+    def get_list_display(self, request):
+        """Dynamically add processing_error to list_display if field exists"""
+        list_display = list(super().get_list_display(request))
+        try:
+            # Check if processing_error field exists
+            from .models import KnowledgeDocument
+            if hasattr(KnowledgeDocument, 'processing_error'):
+                if 'processing_error' not in list_display:
+                    list_display.append('processing_error')
+        except:
+            pass
+        return list_display
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Dynamically add processing_error to readonly_fields if field exists"""
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        try:
+            # Check if processing_error field exists
+            from .models import KnowledgeDocument
+            if hasattr(KnowledgeDocument, 'processing_error'):
+                if 'processing_error' not in readonly_fields:
+                    readonly_fields.append('processing_error')
+        except:
+            pass
+        return readonly_fields
     
     def reprocess_documents(self, request, queryset):
         """Reprocess selected documents"""
@@ -152,8 +178,20 @@ class KnowledgeDocumentAdmin(admin.ModelAdmin):
             self.message_user(request, f"Error processing document: {str(e)}", level='error')
             # Mark as not processed
             obj.is_processed = False
-            obj.processing_error = str(e)
-            KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=False, processing_error=str(e))
+            
+            # Only set processing_error if the field exists
+            try:
+                if hasattr(obj, 'processing_error'):
+                    obj.processing_error = str(e)
+                    KnowledgeDocument.objects.filter(pk=obj.pk).update(
+                        is_processed=False, 
+                        processing_error=str(e)
+                    )
+                else:
+                    KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=False)
+            except:
+                # Fallback if processing_error field doesn't exist
+                KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=False)
 
 # Custom User Admin
 class UserAdmin(BaseUserAdmin):

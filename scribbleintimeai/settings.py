@@ -225,9 +225,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Only add static directory if it exists
 static_dir = os.path.join(BASE_DIR, 'static')
-STATICFILES_DIRS = [
-    static_dir,
-] if os.path.exists(static_dir) else []
+STATICFILES_DIRS = []
+
+# Check if static directory exists and is not empty
+if os.path.exists(static_dir):
+    try:
+        # Check if directory has any files
+        if any(os.listdir(static_dir)):
+            STATICFILES_DIRS.append(static_dir)
+    except:
+        pass
 
 ROOT_URLCONF = 'scribbleintimeai.urls'
 

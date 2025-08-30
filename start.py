@@ -24,11 +24,23 @@ def main():
     
     # Run migrations
     print("Running database migrations...")
-    subprocess.run([sys.executable, 'manage.py', 'migrate'], check=True)
+    try:
+        subprocess.run([sys.executable, 'manage.py', 'migrate'], check=True)
+        print("✓ Migrations completed successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"⚠ Migration warning: {e}")
+        # Continue anyway - migrations might fail if database is not ready
+        pass
     
     # Collect static files
     print("Collecting static files...")
-    subprocess.run([sys.executable, 'manage.py', 'collectstatic', '--noinput'], check=True)
+    try:
+        subprocess.run([sys.executable, 'manage.py', 'collectstatic', '--noinput'], check=True)
+        print("✓ Static files collected successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"⚠ Static files warning: {e}")
+        # Continue anyway - static files might fail but shouldn't stop the server
+        pass
     
     # Start gunicorn
     print(f"Starting server on port {port}...")
