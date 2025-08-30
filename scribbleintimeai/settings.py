@@ -222,9 +222,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Only add static directory if it exists
+static_dir = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+    static_dir,
+] if os.path.exists(static_dir) else []
 
 ROOT_URLCONF = 'scribbleintimeai.urls'
 

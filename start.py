@@ -13,6 +13,15 @@ def main():
     # Get port from Railway environment
     port = os.environ.get('PORT', '8080')
     
+    # Create static directory if it doesn't exist
+    from pathlib import Path
+    static_dir = Path(__file__).resolve().parent / "static"
+    if not static_dir.exists():
+        static_dir.mkdir(exist_ok=True)
+        # Create a placeholder file
+        placeholder_file = static_dir / "placeholder.css"
+        placeholder_file.write_text("/* Static files placeholder */")
+    
     # Run migrations
     print("Running database migrations...")
     subprocess.run([sys.executable, 'manage.py', 'migrate'], check=True)

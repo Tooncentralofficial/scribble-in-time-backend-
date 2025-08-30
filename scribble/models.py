@@ -75,6 +75,7 @@ class KnowledgeDocument(models.Model):
     content = models.TextField(blank=True, help_text='Processed content for vector search')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     is_processed = models.BooleanField(default=False)
+    processing_error = models.TextField(blank=True, null=True, help_text='Error message if processing failed')
     file_size = models.PositiveIntegerField(null=True, blank=True)
     file_type = models.CharField(max_length=50, blank=True)
 
