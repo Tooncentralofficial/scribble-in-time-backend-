@@ -81,3 +81,4 @@ gunicorn
 psycopg2-binary
 whitenoise
 djangorestframework
+dj-database-url
