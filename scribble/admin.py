@@ -66,47 +66,94 @@ class AdminSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(KnowledgeDocument)
 class KnowledgeDocumentAdmin(admin.ModelAdmin):
-    list_display = ('file', 'uploaded_at', 'is_processed')
-    readonly_fields = ('uploaded_at', 'is_processed')
+    list_display = ('file', 'uploaded_at', 'is_processed', 'processing_error')
+    readonly_fields = ('uploaded_at', 'is_processed', 'processing_error')
     date_hierarchy = 'uploaded_at'
+    actions = ['reprocess_documents']
+    
+    def reprocess_documents(self, request, queryset):
+        """Reprocess selected documents"""
+        from .ingest import main
+        
+        success_count = 0
+        for doc in queryset:
+            try:
+                # Reset processing status
+                doc.is_processed = False
+                doc.processing_error = None
+                doc.save()
+                
+                # Reprocess
+                if main():
+                    doc.is_processed = True
+                    doc.save()
+                    success_count += 1
+                else:
+                    doc.processing_error = "Reprocessing failed"
+                    doc.save()
+            except Exception as e:
+                doc.processing_error = str(e)
+                doc.save()
+        
+        if success_count > 0:
+            self.message_user(request, f"Successfully reprocessed {success_count} documents.", level='success')
+        else:
+            self.message_user(request, "Failed to reprocess documents. Check processing errors.", level='error')
+    
+    reprocess_documents.short_description = "Reprocess selected documents"
     
     def save_model(self, request, obj, *args, **kwargs):
         from .ingest import load_documents, chunk_documents, create_or_update_vector_store
         from pathlib import Path
         import os
+        import shutil
         
         # Save the document first
         super().save_model(request, obj, *args, **kwargs)
         
         # Process the document
         try:
-            # Load and process the document
-            docs_dir = os.path.join('media', 'knowledge_base')
+            # Get the correct knowledge base directory
+            project_root = Path(__file__).resolve().parent.parent
+            docs_dir = project_root / "knowledge_base"
             os.makedirs(docs_dir, exist_ok=True)
             
-            # Save the file to the knowledge base directory
-            file_path = os.path.join(docs_dir, os.path.basename(obj.file.name))
-            with open(file_path, 'wb+') as destination:
-                for chunk in obj.file.chunks():
-                    destination.write(chunk)
+            # Copy the uploaded file to the knowledge base directory
+            source_path = obj.file.path
+            filename = os.path.basename(obj.file.name)
+            dest_path = docs_dir / filename
             
-            # Process the document
-            documents = load_documents(docs_dir)
+            # Copy the file
+            shutil.copy2(source_path, dest_path)
+            
+            # Process the document using the ingest module
+            documents = load_documents(str(docs_dir))
             if documents:
                 chunks = chunk_documents(documents)
-                create_or_update_vector_store(chunks)
-                obj.is_processed = True
-                # Don't trigger save_model again to avoid recursion
-                KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=True)
+                vector_store = create_or_update_vector_store(chunks)
                 
-                # Update the DOCUMENTS_UPLOADED setting
-                from django.conf import settings
-                if not hasattr(settings, 'DOCUMENTS_UPLOADED') or not settings.DOCUMENTS_UPLOADED:
-                    from django.conf import settings as django_settings
-                    setattr(django_settings, 'DOCUMENTS_UPLOADED', True)
+                if vector_store:
+                    # Mark as processed
+                    obj.is_processed = True
+                    # Don't trigger save_model again to avoid recursion
+                    KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=True)
+                    
+                    # Update cache to indicate documents are available
+                    from django.core.cache import cache
+                    cache.set('DOCUMENTS_UPLOADED', True, timeout=None)
+                    
+                    self.message_user(request, f"Document '{filename}' processed successfully and added to knowledge base!", level='success')
+                else:
+                    raise Exception("Failed to create vector store")
+            else:
+                raise Exception("No documents were loaded from the file")
                 
         except Exception as e:
             self.message_user(request, f"Error processing document: {str(e)}", level='error')
+            # Mark as not processed
+            obj.is_processed = False
+            obj.processing_error = str(e)
+            KnowledgeDocument.objects.filter(pk=obj.pk).update(is_processed=False, processing_error=str(e))
 
 # Custom User Admin
 class UserAdmin(BaseUserAdmin):

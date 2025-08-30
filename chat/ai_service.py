@@ -91,7 +91,17 @@ class AIService:
             try:
                 # Load the local FAISS vector store
                 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-                vectorstore = FAISS.load_local("vectorstore", embeddings, allow_dangerous_deserialization=True)
+                
+                # Use the same path as the ingest module
+                from pathlib import Path
+                PROJECT_ROOT = Path(__file__).resolve().parent.parent
+                vectorstore_path = str(PROJECT_ROOT / "vectorstore")
+                
+                # Check if vector store exists
+                if not os.path.exists(vectorstore_path):
+                    raise ValueError(f"Vector store not found at {vectorstore_path}. Please upload and process documents first.")
+                
+                vectorstore = FAISS.load_local(vectorstore_path, embeddings, allow_dangerous_deserialization=True)
                 
                 # Get relevant document chunks with scores
                 relevant_docs = vectorstore.similarity_search_with_score(user_message, k=5)
@@ -254,9 +264,15 @@ Respond as Uche, the business owner, using the information from your documents a
                     cache.set('DOCUMENTS_UPLOADED', True, timeout=None)
                     documents_uploaded = True
                 
-                if not documents_uploaded:
+                # Also check if vector store exists
+                from pathlib import Path
+                PROJECT_ROOT = Path(__file__).resolve().parent.parent
+                vectorstore_path = str(PROJECT_ROOT / "vectorstore")
+                vectorstore_exists = os.path.exists(vectorstore_path)
+                
+                if not documents_uploaded or not vectorstore_exists:
                     return {
-                        'message': "I'd love to help you with information about my business, but I need to have my documents uploaded first. Once that's done, I'll be able to answer your questions based on my records.",
+                        'message': "I'd love to help you with information about my business, but I need to have my documents uploaded and processed first. Please ask an admin to upload documents to the knowledge base, and I'll be able to answer your questions based on my records.",
                         'timestamp': timezone.now().isoformat(),
                         'model': response_data.get('model', getattr(settings, 'OPENROUTER_MODEL', 'default-model')),
                         'needs_document': True
