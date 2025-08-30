@@ -99,7 +99,7 @@ class AIService:
                 
                 # Check if vector store exists
                 if not os.path.exists(vectorstore_path):
-                    raise ValueError(f"Vector store not found at {vectorstore_path}. Please upload and process documents first.")
+                    raise ValueError(f"Vector store not found at {vectorstore_path}. Documents exist in database but haven't been processed into vector store yet. Please run document processing first.")
                 
                 vectorstore = FAISS.load_local(vectorstore_path, embeddings, allow_dangerous_deserialization=True)
                 
@@ -272,7 +272,7 @@ Respond as Uche, the business owner, using the information from your documents a
                 
                 if not documents_uploaded or not vectorstore_exists:
                     return {
-                        'message': "I'd love to help you with information about my business, but I need to have my documents uploaded and processed first. Please ask an admin to upload documents to the knowledge base, and I'll be able to answer your questions based on my records.",
+                        'message': "I can see that documents exist in the database, but they haven't been processed into the knowledge base yet. The documents need to be processed to create the vector store that I use to answer questions. Please ask an admin to process the existing documents, and then I'll be able to answer your questions based on the document content.",
                         'timestamp': timezone.now().isoformat(),
                         'model': response_data.get('model', getattr(settings, 'OPENROUTER_MODEL', 'default-model')),
                         'needs_document': True
