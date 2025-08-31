@@ -113,3 +113,52 @@ class KnowledgeDocument(models.Model):
 
     def __str__(self):
         return self.title or f"Document {self.id}"
+
+class MemoirFormSubmission(models.Model):
+    """Model for memoir form submissions"""
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+        ('prefer_not_to_say', 'Prefer not to say'),
+    ]
+    
+    AUDIENCE_CHOICES = [
+        ('family_friends', 'Family and Friends'),
+        ('public', 'Public'),
+        ('specific_group', 'Specific Group'),
+    ]
+    
+    # Personal Information
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
+    
+    # Memoir Details
+    theme = models.CharField(max_length=200, help_text="Overall theme of the memoir")
+    subject = models.CharField(max_length=200, help_text="Subject of the memoir")
+    main_themes = models.TextField(help_text="Main themes to cover in the memoir")
+    key_life_events = models.TextField(help_text="Key life events to include")
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES)
+    
+    # Metadata
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    is_processed = models.BooleanField(default=False)
+    processing_notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = "Memoir Form Submission"
+        verbose_name_plural = "Memoir Form Submissions"
+    
+    def __str__(self):
+        return f"Memoir Submission - {self.first_name} {self.last_name} ({self.email})"
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def get_audience_display_name(self):
+        return dict(self.AUDIENCE_CHOICES).get(self.audience, self.audience)

@@ -40,6 +40,11 @@ urlpatterns = [
     
     # Document management
     path('documents/delete/', DocumentDeleteView.as_view(), name='delete-document'),
+    
+    # Memoir form endpoints
+    path('memoir/submit/', api_views.submit_memoir_form, name='submit-memoir-form'),
+    path('memoir/submissions/', api_views.get_memoir_form_submissions, name='get-memoir-form-submissions'),
+    path('memoir/options/', api_views.get_memoir_form_options, name='get-memoir-form-options'),
 ]
 
 # Include router URLs

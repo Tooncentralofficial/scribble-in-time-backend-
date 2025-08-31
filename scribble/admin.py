@@ -7,7 +7,8 @@ from .models import (
     Message,
     Document,
     AdminSettings,
-    KnowledgeDocument
+    KnowledgeDocument,
+    MemoirFormSubmission
 )
 
 class MessageInline(admin.TabularInline):
@@ -217,6 +218,45 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'username', 'password1', 'password2', 'is_staff', 'is_active')},
         ),
     )
+
+@admin.register(MemoirFormSubmission)
+class MemoirFormSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'email', 'theme', 'audience', 'submitted_at', 'is_processed')
+    list_filter = ('gender', 'audience', 'is_processed', 'submitted_at')
+    search_fields = ('first_name', 'last_name', 'email', 'theme', 'subject')
+    readonly_fields = ('submitted_at', 'is_processed')
+    date_hierarchy = 'submitted_at'
+    
+    fieldsets = (
+        ('Personal Information', {
+            'fields': ('first_name', 'last_name', 'email', 'phone_number', 'gender')
+        }),
+        ('Memoir Details', {
+            'fields': ('theme', 'subject', 'main_themes', 'key_life_events', 'audience')
+        }),
+        ('Processing', {
+            'fields': ('is_processed', 'processing_notes'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('submitted_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['mark_as_processed', 'mark_as_unprocessed']
+    
+    def mark_as_processed(self, request, queryset):
+        """Mark selected submissions as processed"""
+        updated = queryset.update(is_processed=True)
+        self.message_user(request, f'{updated} memoir submission(s) marked as processed.')
+    mark_as_processed.short_description = "Mark selected submissions as processed"
+    
+    def mark_as_unprocessed(self, request, queryset):
+        """Mark selected submissions as unprocessed"""
+        updated = queryset.update(is_processed=False)
+        self.message_user(request, f'{updated} memoir submission(s) marked as unprocessed.')
+    mark_as_unprocessed.short_description = "Mark selected submissions as unprocessed"
 
 # Register the custom User model with our UserAdmin
 admin.site.register(User, UserAdmin)

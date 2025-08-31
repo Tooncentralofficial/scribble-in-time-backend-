@@ -9,12 +9,14 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+from django.core.paginator import Paginator, EmptyPage, InvalidPage
+from rest_framework.decorators import api_view
 
-from .models import Conversation, Message, Document, AdminSettings, KnowledgeDocument
+from .models import Conversation, Message, Document, AdminSettings, KnowledgeDocument, MemoirFormSubmission
 from .serializers import (
     UserSerializer, ConversationSerializer, 
     MessageSerializer, DocumentSerializer, AdminSettingsSerializer,
-    MessageCreateSerializer
+    MessageCreateSerializer, MemoirFormSubmissionSerializer, MemoirFormSubmissionResponseSerializer
 )
 
 User = get_user_model()
@@ -518,3 +520,197 @@ class AdminSettingsView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def submit_memoir_form(request):
+    """
+    Submit a memoir form with personal and memoir details
+    
+    Expected payload:
+    {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john.doe@example.com",
+        "phone_number": "+1234567890",
+        "gender": "male",
+        "theme": "Overcoming adversity",
+        "subject": "My journey through cancer",
+        "main_themes": "Resilience, family support, medical journey",
+        "key_life_events": "Diagnosis, treatment, recovery, new perspective",
+        "audience": "family_friends"
+    }
+    """
+    try:
+        # Validate the incoming data
+        serializer = MemoirFormSubmissionSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'message': 'Validation failed',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Save the memoir form submission
+        memoir_submission = serializer.save()
+        
+        # Create response data
+        response_serializer = MemoirFormSubmissionResponseSerializer(memoir_submission)
+        
+        # Log the submission
+        logger.info(f"New memoir form submission received from {memoir_submission.email}")
+        
+        return Response({
+            'success': True,
+            'message': 'Memoir form submitted successfully! We will review your submission and get back to you soon.',
+            'data': response_serializer.data,
+            'submission_id': memoir_submission.id
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error processing memoir form submission: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'An error occurred while processing your submission. Please try again.',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_memoir_form_submissions(request):
+    """
+    Get all memoir form submissions (admin endpoint)
+    
+    Query parameters:
+    - page: Page number for pagination
+    - page_size: Number of items per page (default: 20)
+    - search: Search term for filtering by name, email, or theme
+    - audience: Filter by audience type
+    - is_processed: Filter by processing status (true/false)
+    - date_from: Filter submissions from this date (YYYY-MM-DD)
+    - date_to: Filter submissions until this date (YYYY-MM-DD)
+    """
+    try:
+        # Get query parameters
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 100)  # Max 100 per page
+        search = request.GET.get('search', '').strip()
+        audience = request.GET.get('audience', '').strip()
+        is_processed = request.GET.get('is_processed', '').strip()
+        date_from = request.GET.get('date_from', '').strip()
+        date_to = request.GET.get('date_to', '').strip()
+        
+        # Start with all submissions
+        queryset = MemoirFormSubmission.objects.all()
+        
+        # Apply filters
+        if search:
+            queryset = queryset.filter(
+                models.Q(first_name__icontains=search) |
+                models.Q(last_name__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(theme__icontains=search) |
+                models.Q(subject__icontains=search)
+            )
+        
+        if audience:
+            queryset = queryset.filter(audience=audience)
+        
+        if is_processed:
+            if is_processed.lower() == 'true':
+                queryset = queryset.filter(is_processed=True)
+            elif is_processed.lower() == 'false':
+                queryset = queryset.filter(is_processed=False)
+        
+        if date_from:
+            try:
+                from datetime import datetime
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(submitted_at__date__gte=date_from_obj)
+            except ValueError:
+                pass
+        
+        if date_to:
+            try:
+                from datetime import datetime
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(submitted_at__date__lte=date_to_obj)
+            except ValueError:
+                pass
+        
+        # Paginate results
+        paginator = Paginator(queryset, page_size)
+        try:
+            submissions_page = paginator.page(page)
+        except (EmptyPage, InvalidPage):
+            submissions_page = paginator.page(paginator.num_pages)
+        
+        # Serialize the data
+        serializer = MemoirFormSubmissionResponseSerializer(submissions_page, many=True)
+        
+        # Prepare response data
+        response_data = {
+            'success': True,
+            'data': serializer.data,
+            'pagination': {
+                'current_page': submissions_page.number,
+                'total_pages': paginator.num_pages,
+                'total_count': paginator.count,
+                'has_next': submissions_page.has_next(),
+                'has_previous': submissions_page.has_previous(),
+                'page_size': page_size
+            },
+            'filters': {
+                'search': search,
+                'audience': audience,
+                'is_processed': is_processed,
+                'date_from': date_from,
+                'date_to': date_to
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching memoir form submissions: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'An error occurred while fetching submissions.',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_memoir_form_options(request):
+    """
+    Get available options for the memoir form (gender choices, audience choices, etc.)
+    """
+    try:
+        options = {
+            'gender_choices': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in MemoirFormSubmission.GENDER_CHOICES
+            ],
+            'audience_choices': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in MemoirFormSubmission.AUDIENCE_CHOICES
+            ],
+            'form_fields': {
+                'personal_info': [
+                    'first_name', 'last_name', 'email', 'phone_number', 'gender'
+                ],
+                'memoir_details': [
+                    'theme', 'subject', 'main_themes', 'key_life_events', 'audience'
+                ]
+            }
+        }
+        
+        return Response({
+            'success': True,
+            'data': options
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting memoir form options: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'An error occurred while fetching form options.',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

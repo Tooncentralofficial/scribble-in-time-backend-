@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Conversation, Message, Document, AdminSettings
+from .models import Conversation, Message, Document, AdminSettings, MemoirFormSubmission
 
 User = get_user_model()
 
@@ -114,6 +114,53 @@ class AdminSettingsSerializer(serializers.ModelSerializer):
         model = AdminSettings
         fields = ['ai_enabled', 'auto_response', 'response_timeout', 'updated_at']
         read_only_fields = ['updated_at']
+
+class MemoirFormSubmissionSerializer(serializers.ModelSerializer):
+    """Serializer for memoir form submissions"""
+    
+    class Meta:
+        model = MemoirFormSubmission
+        fields = [
+            'first_name', 'last_name', 'email', 'phone_number', 'gender',
+            'theme', 'subject', 'main_themes', 'key_life_events', 'audience'
+        ]
+    
+    def validate_email(self, value):
+        """Validate email format"""
+        if not value or '@' not in value:
+            raise serializers.ValidationError("Please provide a valid email address.")
+        return value
+    
+    def validate_phone_number(self, value):
+        """Validate phone number format"""
+        if not value or len(value.strip()) < 10:
+            raise serializers.ValidationError("Please provide a valid phone number.")
+        return value.strip()
+    
+    def validate(self, data):
+        """Additional validation"""
+        if not data.get('first_name') or not data.get('last_name'):
+            raise serializers.ValidationError("First name and last name are required.")
+        
+        if not data.get('theme') or not data.get('subject'):
+            raise serializers.ValidationError("Theme and subject are required.")
+        
+        if not data.get('main_themes') or not data.get('key_life_events'):
+            raise serializers.ValidationError("Main themes and key life events are required.")
+        
+        return data
+
+class MemoirFormSubmissionResponseSerializer(serializers.ModelSerializer):
+    """Serializer for memoir form submission responses"""
+    
+    class Meta:
+        model = MemoirFormSubmission
+        fields = [
+            'id', 'first_name', 'last_name', 'email', 'phone_number', 'gender',
+            'theme', 'subject', 'main_themes', 'key_life_events', 'audience',
+            'submitted_at', 'is_processed'
+        ]
+        read_only_fields = ['id', 'submitted_at', 'is_processed']
 
 # Alias for backward compatibility
 ConversationDetail = ConversationDetailSerializer
