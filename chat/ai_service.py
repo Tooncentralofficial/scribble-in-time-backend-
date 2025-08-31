@@ -84,7 +84,7 @@ class AIService:
             messages.append({"role": "user", "content": user_message})
             
             # Get relevant document context from local FAISS vector store
-            from langchain_community.embeddings import HuggingFaceEmbeddings
+            from langchain_huggingface import HuggingFaceEmbeddings
             from langchain_community.vectorstores import FAISS
             from django.conf import settings
             
