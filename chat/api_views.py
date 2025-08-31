@@ -76,6 +76,25 @@ class DocumentUploadView(APIView):
             thread.daemon = True
             thread.start()
             
+            # Also try to clean up any corrupted vector store files
+            try:
+                import os
+                from pathlib import Path
+                vectorstore_path = Path(__file__).resolve().parent.parent / "vectorstore"
+                index_file = vectorstore_path / "index.faiss"
+                pkl_file = vectorstore_path / "index.pkl"
+                
+                # If files exist but are empty, remove them
+                if (index_file.exists() and index_file.stat().st_size == 0) or \
+                   (pkl_file.exists() and pkl_file.stat().st_size == 0):
+                    logger.warning("Found empty vector store files, removing them")
+                    if index_file.exists() and index_file.stat().st_size == 0:
+                        index_file.unlink()
+                    if pkl_file.exists() and pkl_file.stat().st_size == 0:
+                        pkl_file.unlink()
+            except Exception as cleanup_error:
+                logger.warning(f"Error during vector store cleanup: {str(cleanup_error)}")
+            
             # Return immediate response
             return Response(
                 {

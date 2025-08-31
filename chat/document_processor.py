@@ -50,11 +50,22 @@ class DocumentProcessor:
     def create_or_update_vector_store(self, documents):
         """Create or update the vector store with new documents"""
         try:
+            # Ensure the directory exists first
+            os.makedirs(self.vectorstore_path, exist_ok=True)
+            
             # Check if vector store directory exists and has the required files
             index_file = os.path.join(self.vectorstore_path, 'index.faiss')
             pkl_file = os.path.join(self.vectorstore_path, 'index.pkl')
             
-            if os.path.exists(index_file) and os.path.exists(pkl_file):
+            logger.info(f"Checking vector store files:")
+            logger.info(f"  Index file: {index_file} (exists: {os.path.exists(index_file)})")
+            logger.info(f"  PKL file: {pkl_file} (exists: {os.path.exists(pkl_file)})")
+            
+            # Only try to load if both files exist and have content
+            if (os.path.exists(index_file) and os.path.exists(pkl_file) and 
+                os.path.getsize(index_file) > 0 and os.path.getsize(pkl_file) > 0):
+                
+                logger.info("Both vector store files exist and have content, attempting to load...")
                 try:
                     # Load existing vector store
                     vectorstore = FAISS.load_local(
@@ -62,9 +73,12 @@ class DocumentProcessor:
                         self.embeddings,
                         allow_dangerous_deserialization=True
                     )
+                    logger.info("Successfully loaded existing vector store")
+                    
                     # Add new documents
                     vectorstore.add_documents(documents)
                     logger.info(f"Updated existing vector store with {len(documents)} new documents")
+                    
                 except Exception as load_error:
                     logger.warning(f"Failed to load existing vector store: {str(load_error)}")
                     logger.info("Creating new vector store instead")
@@ -72,15 +86,16 @@ class DocumentProcessor:
                     vectorstore = FAISS.from_documents(documents, self.embeddings)
                     logger.info(f"Created new vector store with {len(documents)} documents")
             else:
+                logger.info("Vector store files don't exist or are empty, creating new vector store")
                 # Create new vector store
                 vectorstore = FAISS.from_documents(documents, self.embeddings)
                 logger.info(f"Created new vector store with {len(documents)} documents")
             
-            # Ensure the directory exists before saving
-            os.makedirs(self.vectorstore_path, exist_ok=True)
-            
             # Save the updated vector store
+            logger.info(f"Saving vector store to {self.vectorstore_path}")
             vectorstore.save_local(self.vectorstore_path)
+            logger.info("Vector store saved successfully")
+            
             return vectorstore
             
         except Exception as e:
