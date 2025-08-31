@@ -1,5 +1,8 @@
 import time
+import logging
 from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -34,8 +37,14 @@ class DocumentUploadView(APIView):
     
     def post(self, request, *args, **kwargs):
         try:
+            # Debug logging
+            logger.info(f"Document upload request received")
+            logger.info(f"Request FILES: {request.FILES}")
+            logger.info(f"Request content type: {request.content_type}")
+            
             file_obj = request.FILES.get('file')
             if not file_obj:
+                logger.error("No file found in request.FILES")
                 return Response(
                     {'error': 'No file provided'}, 
                     status=status.HTTP_400_BAD_REQUEST
@@ -53,28 +62,8 @@ class DocumentUploadView(APIView):
             document = KnowledgeDocument.objects.create(
                 file=file_obj,
                 title=file_obj.name,
-                status='processing'
-            )
-            
-            # Start async processing
-            from .tasks import process_document_async
-            process_document_async.delay(document.id)
-            
-            # Return immediate response
-            return Response(
-                {
-                    'id': document.id,
-                    'title': document.title,
-                    'status': 'processing'
-                },
-                status=status.HTTP_201_CREATED
-            )
-            
-            # Create document record
-            document = KnowledgeDocument.objects.create(
-                title=file_obj.name,
-                file=file_obj,
-                file_type=file_ext
+                file_type=file_ext,
+                is_processed=False
             )
             
             # Process document in background
@@ -87,6 +76,7 @@ class DocumentUploadView(APIView):
             thread.daemon = True
             thread.start()
             
+            # Return immediate response
             return Response(
                 {
                     'id': document.id,
@@ -97,6 +87,7 @@ class DocumentUploadView(APIView):
             )
             
         except Exception as e:
+            logger.error(f"Error in document upload: {str(e)}", exc_info=True)
             return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

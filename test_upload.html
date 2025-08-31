@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-form {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .upload-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Document Upload Test</h1>
+    
+    <div class="upload-form">
+        <h3>Upload Document</h3>
+        <input type="file" id="fileInput" class="file-input" accept=".pdf,.txt,.md,.docx">
+        <br>
+        <button id="uploadBtn" class="upload-btn" onclick="uploadDocument()">Upload Document</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <div class="info">
+        <h4>Supported file types:</h4>
+        <ul>
+            <li>PDF (.pdf)</li>
+            <li>Text (.txt)</li>
+            <li>Markdown (.md)</li>
+            <li>Word Document (.docx)</li>
+        </ul>
+    </div>
+
+    <script>
+        async function uploadDocument() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const resultDiv = document.getElementById('result');
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                showResult('Please select a file first.', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            showResult('Uploading document...', 'info');
+            
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Debug: Log FormData contents
+                console.log('FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    console.log('Key:', key, 'Value:', value);
+                    console.log('File name:', value.name);
+                    console.log('File size:', value.size);
+                    console.log('File type:', value.type);
+                }
+                
+                // Make the request
+                const response = await fetch('/api/chat/documents/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Upload successful! Document ID: ${result.id}, Title: ${result.title}`, 'success');
+                    console.log('Upload result:', result);
+                } else {
+                    showResult(`Upload failed: ${result.error}`, 'error');
+                    console.error('Upload error:', result);
+                }
+                
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+                console.error('Network error:', error);
+            } finally {
+                // Re-enable button
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload Document';
+            }
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+        
+        // Add file change listener
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                showResult(`Selected file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+            }
+        });
+    </script>
+</body>
+</html> 
