@@ -568,6 +568,15 @@ def submit_memoir_form(request):
         
     except Exception as e:
         logger.error(f"Error processing memoir form submission: {str(e)}")
+        
+        # Check if it's a missing table error
+        if "no such table" in str(e).lower() and "memoirformsubmission" in str(e).lower():
+            return Response({
+                'success': False,
+                'message': 'The system is still initializing. Please try again in a few moments.',
+                'error': 'Database table not ready yet'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
         return Response({
             'success': False,
             'message': 'An error occurred while processing your submission. Please try again.',
@@ -671,6 +680,15 @@ def get_memoir_form_submissions(request):
         
     except Exception as e:
         logger.error(f"Error fetching memoir form submissions: {str(e)}")
+        
+        # Check if it's a missing table error
+        if "no such table" in str(e).lower() and "memoirformsubmission" in str(e).lower():
+            return Response({
+                'success': False,
+                'message': 'The system is still initializing. Please try again in a few moments.',
+                'error': 'Database table not ready yet'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
         return Response({
             'success': False,
             'message': 'An error occurred while fetching submissions.',
