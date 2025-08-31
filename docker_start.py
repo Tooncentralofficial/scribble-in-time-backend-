@@ -36,6 +36,22 @@ def main():
     max_retries = 3
     for attempt in range(max_retries):
         try:
+            # First, try to make migrations to ensure all migration files are detected
+            print(f"Migration attempt {attempt + 1}: Making migrations...")
+            makemigrations_result = subprocess.run(
+                [sys.executable, 'manage.py', 'makemigrations'], 
+                capture_output=True, 
+                text=True,
+                timeout=30
+            )
+            if makemigrations_result.returncode == 0:
+                print("✓ Makemigrations completed")
+            else:
+                print(f"⚠ Makemigrations output: {makemigrations_result.stdout}")
+                print(f"⚠ Makemigrations errors: {makemigrations_result.stderr}")
+            
+            # Then run migrations
+            print(f"Migration attempt {attempt + 1}: Running migrations...")
             result = subprocess.run(
                 [sys.executable, 'manage.py', 'migrate'], 
                 capture_output=True, 
@@ -44,9 +60,12 @@ def main():
             )
             if result.returncode == 0:
                 print("✓ Migrations completed successfully")
+                print(f"Migration output: {result.stdout}")
                 break
             else:
-                print(f"⚠ Migration attempt {attempt + 1} failed: {result.stderr}")
+                print(f"⚠ Migration attempt {attempt + 1} failed:")
+                print(f"  STDOUT: {result.stdout}")
+                print(f"  STDERR: {result.stderr}")
                 if attempt < max_retries - 1:
                     print("Retrying in 10 seconds...")
                     time.sleep(10)
