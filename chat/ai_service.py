@@ -97,11 +97,17 @@ class AIService:
                 PROJECT_ROOT = Path(__file__).resolve().parent.parent
                 vectorstore_path = str(PROJECT_ROOT / "vectorstore")
                 
-                # Check if vector store exists
-                if not os.path.exists(vectorstore_path):
+                # Check if vector store exists and has required files
+                index_file = os.path.join(vectorstore_path, 'index.faiss')
+                pkl_file = os.path.join(vectorstore_path, 'index.pkl')
+                
+                if not os.path.exists(index_file) or not os.path.exists(pkl_file):
                     raise ValueError(f"Vector store not found at {vectorstore_path}. Documents exist in database but haven't been processed into vector store yet. Please run document processing first.")
                 
-                vectorstore = FAISS.load_local(vectorstore_path, embeddings, allow_dangerous_deserialization=True)
+                try:
+                    vectorstore = FAISS.load_local(vectorstore_path, embeddings, allow_dangerous_deserialization=True)
+                except Exception as load_error:
+                    raise ValueError(f"Failed to load vector store: {str(load_error)}. The vector store may be corrupted. Please re-process the documents.")
                 
                 # Get relevant document chunks with scores
                 relevant_docs = vectorstore.similarity_search_with_score(user_message, k=5)
