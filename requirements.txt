@@ -12,6 +12,9 @@ setuptools
 sentence-transformers==2.2.2
 faiss-cpu==1.12.0
 numpy
+langchain-community
+langchain-core
+langchain-huggingface
 
 # PDF Processing
 pypdf==4.3.0
