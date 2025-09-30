@@ -6,11 +6,12 @@ psycopg2-binary
 whitenoise
 dj-database-url
 python-dotenv
+setuptools
 
 # Ultra-lightweight AI Stack
 sentence-transformers==2.2.2
 faiss-cpu==1.12.0
-numpy==1.24.3
+numpy
 
 # PDF Processing
 pypdf==4.3.0
