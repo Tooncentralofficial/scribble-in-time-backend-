@@ -15,6 +15,7 @@ numpy
 langchain-community
 langchain-core
 langchain-huggingface
+openai
 
 # PDF Processing
 pypdf==4.3.0
